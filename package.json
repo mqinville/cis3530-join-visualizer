@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc -p . && vite build",
     "preview": "vite preview",
+    "verify:csv": "bun scripts/verify-csv.ts",
     "verify:ui": "bun scripts/verify-ui.mjs"
   },
   "dependencies": {

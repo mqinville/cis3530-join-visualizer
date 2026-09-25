@@ -3,6 +3,13 @@ import type { AttrRef, Column, Cond, Database, EvalResult, Expr, JoinOp, Operand
 
 export class EvalError extends Error {}
 
+/**
+ * Only imported tables can get near these. Every compared pair is an animation frame (cheap), and
+ * every result row is a table row in the page (expensive: stepping slows to seconds past ~5,000).
+ */
+export const MAX_JOIN_PAIRS = 50_000;
+export const MAX_RESULT_ROWS = 5_000;
+
 /** Label shown for a column: qualified (Movies.mID) only when the bare name is ambiguous inside the relation. */
 export function columnLabels(r: Relation): string[] {
   return r.columns.map((c) => {
@@ -31,15 +38,26 @@ function findAttr(cols: Column[], ref: AttrRef, context: string): number {
 
 // ---------- Conditions ----------
 
+/** SQL's three-valued logic: null stands for "unknown", the result of any comparison with null. */
+type Truth = boolean | null;
+
 interface BoundCond {
+  truth: (row: Value[]) => Truth;
+  /** True only when the condition is true: σ and theta joins drop rows where it is false or unknown. */
   test: (row: Value[]) => boolean;
   /** Human readable trace with the row's values substituted in, e.g. "1980 ≥ 1970 ✓". */
   trace: (row: Value[]) => string;
   attrs: number[];
 }
 
+const mark = (t: Truth) => (t === null ? '?' : t ? '✓' : '✗');
+
 function compare(a: Value, b: Value, op: string): boolean {
-  if (a === null || b === null) return false; // comparisons with null are never true
+  return compare3(a, b, op) === true;
+}
+
+function compare3(a: Value, b: Value, op: string): Truth {
+  if (a === null || b === null) return null; // comparisons with null are unknown, never true
   let x: string | number = a;
   let y: string | number = b;
   if (typeof x !== typeof y) {
@@ -68,27 +86,42 @@ function bindCond(c: Cond, cols: Column[], context: string): BoundCond {
         return { get: (row: Value[]) => row[i], idx: [i] };
       };
       const l = side(c.l), r = side(c.r);
-      return {
-        test: (row) => compare(l.get(row), r.get(row), c.op),
+      return withTest({
+        truth: (row) => compare3(l.get(row), r.get(row), c.op),
         trace: (row) => `${fmtValue(l.get(row))} ${OP_TXT[c.op]} ${fmtValue(r.get(row))}`,
         attrs: [...l.idx, ...r.idx],
-      };
+      });
     }
     case 'not': {
+      // ¬unknown is still unknown, so ¬(major = 'CS') does not keep rows whose major is null.
       const e = bindCond(c.e, cols, context);
-      return { test: (row) => !e.test(row), trace: (row) => `¬(${e.trace(row)})`, attrs: e.attrs };
+      return withTest({
+        truth: (row) => { const t = e.truth(row); return t === null ? null : !t; },
+        trace: (row) => `¬(${e.trace(row)})`,
+        attrs: e.attrs,
+      });
     }
     case 'and':
     case 'or': {
       const l = bindCond(c.l, cols, context), r = bindCond(c.r, cols, context);
       const sym = c.kind === 'and' ? '∧' : '∨';
-      return {
-        test: c.kind === 'and' ? (row) => l.test(row) && r.test(row) : (row) => l.test(row) || r.test(row),
-        trace: (row) => `(${l.trace(row)} ${l.test(row) ? '✓' : '✗'}) ${sym} (${r.trace(row)} ${r.test(row) ? '✓' : '✗'})`,
+      // ∧: false beats unknown beats true.  ∨: true beats unknown beats false.
+      const decisive = c.kind === 'or';
+      return withTest({
+        truth: (row) => {
+          const a = l.truth(row), b = r.truth(row);
+          if (a === decisive || b === decisive) return decisive;
+          return a === null || b === null ? null : !decisive;
+        },
+        trace: (row) => `(${l.trace(row)} ${mark(l.truth(row))}) ${sym} (${r.trace(row)} ${mark(r.truth(row))})`,
         attrs: [...l.attrs, ...r.attrs],
-      };
+      });
     }
   }
+}
+
+function withTest(c: Omit<BoundCond, 'test'>): BoundCond {
+  return { ...c, test: (row) => c.truth(row) === true };
 }
 
 // ---------- Helpers ----------
@@ -130,10 +163,12 @@ export function evaluate(expr: Expr, db: Database): EvalResult {
     const out: Relation = { name: `T${stages.length + 1}`, columns: input.columns, rows: [] };
     const events: StepEvent[] = [];
     input.rows.forEach((row, i) => {
-      const pass = cond.test(row);
+      const truth = cond.truth(row);
+      const pass = truth === true;
       let o: number | undefined;
       if (pass) { o = out.rows.length; out.rows.push(row); }
-      events.push({ t: 'filter', row: i, pass, out: o, detail: `Row ${i + 1}: ${cond.trace(row)} → ${pass ? 'true, keep the row' : 'false, drop the row'}` });
+      const verdict = pass ? 'true, keep the row' : truth === null ? 'unknown (it involves null), drop the row' : 'false, drop the row';
+      events.push({ t: 'filter', row: i, pass, out: o, detail: `Row ${i + 1}: ${cond.trace(row)} → ${verdict}` });
     });
     stages.push({
       kind: 'select', symbol: 'σ', label, short: `σ[${condToString(e.cond)}](${input.name})`,
@@ -194,6 +229,11 @@ export function evaluate(expr: Expr, db: Database): EvalResult {
     const op: JoinOp = e.op;
     const symbol = { product: '×', natural: '⋈', theta: '⋈', left: '⟕', right: '⟖', full: '⟗' }[op];
     const events: StepEvent[] = [];
+    const pairs = L.rows.length * R.rows.length;
+    if (pairs > MAX_JOIN_PAIRS) {
+      throw new EvalError(`${label} would compare ${L.rows.length} × ${R.rows.length} = ${pairs.toLocaleString('en')} pairs of rows, which is too many to animate `
+        + `(the limit is ${MAX_JOIN_PAIRS.toLocaleString('en')}). Use σ to keep fewer rows before joining.`);
+    }
 
     // Natural-style joins (⋈, ⟕, ⟖, ⟗ without a condition) match on same-named attributes.
     const natural = op !== 'product' && !e.cond;
@@ -285,6 +325,11 @@ export function evaluate(expr: Expr, db: Database): EvalResult {
         out.rows.push([...left, ...rKeep.map((j) => r[j])]);
         events.push({ t: 'pad', side: 'right', row: ri, out: o, detail: `${R.name} row ${ri + 1} (${describeRow(R, r, rKeys)}) has no partner — kept, and the ${L.name} columns are filled with null` });
       });
+    }
+
+    if (out.rows.length > MAX_RESULT_ROWS) {
+      throw new EvalError(`${label} would produce ${out.rows.length.toLocaleString('en')} rows, which is too many to show (the limit is ${MAX_RESULT_ROWS.toLocaleString('en')}). `
+        + `Use σ to keep fewer rows before joining${op === 'product' ? ', or join on a condition instead of ×' : ''}.`);
     }
 
     stages.push({

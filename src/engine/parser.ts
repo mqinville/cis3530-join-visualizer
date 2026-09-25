@@ -42,6 +42,9 @@ const WORD_SYMBOLS: Record<string, string> = {
   and: '∧', or: '∨', not: '¬',
 };
 
+/** Words that can never be used as a relation or attribute name (lower case). */
+export const RESERVED_WORDS: ReadonlySet<string> = new Set([...Object.keys(WORD_SYMBOLS), 'null']);
+
 const SINGLE = new Set(['σ', 'π', 'ρ', '⋈', '⟕', '⟖', '⟗', '×', '∧', '∨', '¬', '(', ')', '[', ']', ',', '.', '=', '<', '>', '≠', '≤', '≥', '{', '}']);
 const QUOTES: Record<string, string> = { "'": "'", '"': '"', '‘': '’', '“': '”', '”': '”', '’': '’' };
 

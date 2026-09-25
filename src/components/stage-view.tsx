@@ -91,8 +91,10 @@ function BareRelation({ rel }: { rel: Relation }) {
         summary="This query is just a table name, so there is no operation to animate. Try joining it with another table." />
       <div id="inputs" className="inputs relative"><svg id="links" className="links" aria-hidden="true" /></div>
       <NarrationBox counter="" text={`Result: ${rel.rows.length} tuple(s).`} tone="final" stepKey="bare" />
-      <OutputHead title={`Result: ${rel.name}`} stats={statsText(rel)} />
-      <RelationTable rel={rel} className="tall" />
+      <div id="output" className="output">
+        <OutputHead title={`Result: ${rel.name}`} stats={statsText(rel)} />
+        <RelationTable rel={rel} className="tall" />
+      </div>
       <Legend />
     </Card>
   );
@@ -252,7 +254,7 @@ function ActiveStage({ stage: s, ev, player, stepKey, animate, speed, playing }:
 
       <NarrationBox {...narration} stepKey={stepKey} />
 
-      <div className="output">
+      <div id="output" className="output">
         <OutputHead title={`Result ${s.output.name}`} stats={
           <>degree {s.output.columns.length} · cardinality <span key={st.visibleOut} className={cn(animate && 'tick-pop')}>{st.visibleOut}</span>{partial ? ' so far' : ''}</>
         } />

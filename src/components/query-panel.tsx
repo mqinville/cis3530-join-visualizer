@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import type { Source } from './database-panel';
 
 export const CUSTOM = '__custom';
 
@@ -37,6 +38,9 @@ const HELP: [string, React.ReactNode][] = [
 ];
 
 interface Props {
+  source: Source;
+  /** Names of the imported tables, shown as a hint while querying them. */
+  tableNames: string[];
   presetId: string;
   query: string;
   bachchan: boolean;
@@ -49,10 +53,11 @@ interface Props {
   onReset: () => void;
 }
 
-export function QueryPanel({ presetId, query, bachchan, error, errorKey, onPreset, onQuery, onBachchan, onRun, onReset }: Props) {
+export function QueryPanel({ source, tableNames, presetId, query, bachchan, error, errorKey, onPreset, onQuery, onBachchan, onRun, onReset }: Props) {
   const ta = useRef<HTMLTextAreaElement>(null);
   const [helpOpen, setHelpOpen] = useState(false);
-  const preset = PRESETS.find((p) => p.id === presetId);
+  const own = source === 'import';
+  const preset = own ? undefined : PRESETS.find((p) => p.id === presetId);
 
   const insert = (text: string, caret: number) => {
     const el = ta.current!;
@@ -69,9 +74,10 @@ export function QueryPanel({ presetId, query, bachchan, error, errorKey, onPrese
       </CardHeader>
       <CardContent className="px-4">
         <Label htmlFor="preset" className="mt-2.5 mb-1.5 text-xs font-normal text-muted-foreground">Example from the slides</Label>
-        <Select value={presetId} onValueChange={(v) => v !== CUSTOM && onPreset(v)}>
+        {/* While querying an import no example is selected; picking one switches back to the course tables. */}
+        <Select value={own ? '' : presetId} onValueChange={(v) => v && v !== CUSTOM && onPreset(v)}>
           <SelectTrigger id="preset" className="w-full bg-card">
-            <SelectValue />
+            <SelectValue placeholder="Choose one (uses the course tables)" />
           </SelectTrigger>
           <SelectContent position="popper" className="max-h-96">
             {PRESETS.map((p) => (
@@ -84,9 +90,11 @@ export function QueryPanel({ presetId, query, bachchan, error, errorKey, onPrese
           </SelectContent>
         </Select>
 
-        <p key={presetId} id="question" className="mt-2 rounded-r-md border-l-[3px] border-primary bg-brand-soft px-2.5 py-2 text-[13px] animate-in fade-in slide-in-from-left-1 duration-300">
-          <span className="block text-xs text-muted-foreground">{preset ? preset.slide : 'Your own query'}</span>
-          {preset ? preset.question : 'Edit the expression and press Run (⌘/Ctrl + Enter).'}
+        <p key={own ? source : presetId} id="question" className="mt-2 rounded-r-md border-l-[3px] border-primary bg-brand-soft px-2.5 py-2 text-[13px] animate-in fade-in slide-in-from-left-1 duration-300">
+          <span className="block text-xs text-muted-foreground">{preset ? preset.slide : own ? 'Your imported tables' : 'Your own query'}</span>
+          {preset ? preset.question : own
+            ? <>Write a query using {tableNames.map((n, i) => <span key={n}>{i > 0 && ', '}<code>{n}</code></span>)}, then press Run (⌘/Ctrl + Enter).</>
+            : 'Edit the expression and press Run (⌘/Ctrl + Enter).'}
         </p>
 
         <Label htmlFor="query" className="mt-3 mb-1.5 text-xs font-normal text-muted-foreground">Relational algebra expression</Label>
@@ -102,17 +110,19 @@ export function QueryPanel({ presetId, query, bachchan, error, errorKey, onPrese
           ))}
         </div>
 
-        <div className="mt-3.5 flex items-start gap-2">
-          <Checkbox id="bachchan" checked={bachchan} onCheckedChange={(c) => onBachchan(c === true)} className="mt-0.5" />
-          <Label htmlFor="bachchan" className="text-[13px] leading-snug font-normal">Include artist 5, Bachchan (added on slide 44)</Label>
-        </div>
+        {!own && (
+          <div className="mt-3.5 flex items-start gap-2">
+            <Checkbox id="bachchan" checked={bachchan} onCheckedChange={(c) => onBachchan(c === true)} className="mt-0.5" />
+            <Label htmlFor="bachchan" className="text-[13px] leading-snug font-normal">Include artist 5, Bachchan (added on slide 44)</Label>
+          </div>
+        )}
 
         <div className="mt-3.5 flex flex-wrap gap-2">
           <Button id="run" onClick={onRun} className="group font-semibold">
             <Play className="transition-transform group-hover:scale-110" />Run &amp; animate
           </Button>
           <Button id="reset" variant="outline" onClick={onReset} className="group">
-            <RotateCcw className="transition-transform duration-500 group-hover:-rotate-180" />Reset to slide query
+            <RotateCcw className="transition-transform duration-500 group-hover:-rotate-180" />{own ? 'Reset query' : 'Reset to slide query'}
           </Button>
         </div>
 
