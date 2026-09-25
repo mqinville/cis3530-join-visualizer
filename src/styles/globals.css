@@ -1,0 +1,266 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+
+  /* Domain colours: what happened to a row. */
+  --color-match: var(--match);
+  --color-match-soft: var(--match-soft);
+  --color-nomatch: var(--nomatch);
+  --color-nomatch-soft: var(--nomatch-soft);
+  --color-pad: var(--pad);
+  --color-pad-soft: var(--pad-soft);
+  --color-null: var(--null);
+  --color-null-soft: var(--null-soft);
+  --color-key-soft: var(--key-soft);
+  --color-brand-soft: var(--brand-soft);
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: #f6f7fb;
+  --foreground: #1c2033;
+  --card: #ffffff;
+  --card-foreground: #1c2033;
+  --popover: #ffffff;
+  --popover-foreground: #1c2033;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f3f9;
+  --secondary-foreground: #1c2033;
+  --muted: #f1f3f9;
+  --muted-foreground: #5d6479;
+  --accent: #ecebfd;
+  --accent-foreground: #3730a3;
+  --destructive: #b91c1c;
+  --border: #e2e5ee;
+  --input: #c9cedb;
+  --ring: #4f46e5;
+
+  --brand-soft: #ecebfd;
+  --match: #15803d;
+  --match-soft: #dcfce7;
+  --nomatch: #b91c1c;
+  --nomatch-soft: #fee2e2;
+  --pad: #b45309;
+  --pad-soft: #fef3c7;
+  --null: #9f1239;
+  --null-soft: #ffe4e6;
+  --key-soft: #e0e7ff;
+  --from-left: #60a5fa;
+  --from-right: #a78bfa;
+  --shadow: 0 1px 2px rgb(20 24 40 / 0.06), 0 4px 16px rgb(20 24 40 / 0.05);
+
+  /* Motion: one easing family for everything, so the whole app moves with one "feel". */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  color-scheme: light;
+}
+
+.dark {
+  --background: #0f1117;
+  --foreground: #e7e9f1;
+  --card: #171a23;
+  --card-foreground: #e7e9f1;
+  --popover: #1b1f2a;
+  --popover-foreground: #e7e9f1;
+  --primary: #8b85ff;
+  --primary-foreground: #0f1117;
+  --secondary: #1e2230;
+  --secondary-foreground: #e7e9f1;
+  --muted: #1e2230;
+  --muted-foreground: #9aa2b8;
+  --accent: #25234a;
+  --accent-foreground: #c7c4ff;
+  --destructive: #f87171;
+  --border: #2a2f3f;
+  --input: #3a4155;
+  --ring: #8b85ff;
+
+  --brand-soft: #25234a;
+  --match: #4ade80;
+  --match-soft: #133222;
+  --nomatch: #f87171;
+  --nomatch-soft: #3a1717;
+  --pad: #fbbf24;
+  --pad-soft: #3a2c0d;
+  --null: #fb7185;
+  --null-soft: #3b1320;
+  --key-soft: #252c55;
+  --shadow: none;
+  color-scheme: dark;
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground font-sans text-sm antialiased; }
+  code { @apply font-mono text-[0.92em] bg-muted rounded px-1 py-px; }
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Relation tables. Row appearance is driven entirely by state classes set from React, and every
+   visual property that changes between frames has a transition, so stepping looks continuous.
+   --------------------------------------------------------------------------------------------- */
+
+.table-scroll {
+  overflow: auto;
+  max-height: 300px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--card);
+}
+.table-scroll.tall { max-height: 380px; }
+.table-scroll.compact { max-height: 220px; }
+
+table.rel { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.rel th, table.rel td {
+  padding: 5px 10px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border);
+  transition: background-color 0.35s var(--ease-out), opacity 0.35s var(--ease-out), color 0.35s var(--ease-out),
+    box-shadow 0.35s var(--ease-out), text-decoration-color 0.35s var(--ease-out);
+}
+table.rel th { position: sticky; top: 0; background: var(--muted); font-weight: 600; font-size: 12px; z-index: 1; }
+table.rel tr:last-child td { border-bottom: none; }
+table.rel .rownum { color: var(--muted-foreground); font-size: 11px; width: 1%; padding-right: 4px; }
+table.rel .key { background: var(--key-soft); }
+table.rel th.from-l { box-shadow: inset 0 -3px 0 var(--from-left); }
+table.rel th.from-r { box-shadow: inset 0 -3px 0 var(--from-right); }
+table.rel .dim { opacity: 0.3; }
+table.rel td.null { color: var(--null); background: var(--null-soft); font-style: italic; }
+
+/* The strike-through is always there but transparent; "dropped" fades its colour in, so the line
+   appears to be drawn instead of snapping on. */
+table.rel tbody td { text-decoration: line-through transparent; text-decoration-thickness: 1.5px; }
+
+table.rel tbody tr { transition: transform 0.3s var(--ease-out); }
+tr.matched td:not(.key) { background: color-mix(in srgb, var(--match-soft) 55%, transparent); }
+tr.kept td { background: color-mix(in srgb, var(--match-soft) 60%, transparent); }
+tr.dangling td { background: var(--pad-soft); }
+tr.dangling td:first-child { box-shadow: inset 3px 0 0 var(--pad); }
+tr.dropped td { opacity: 0.4; text-decoration-color: var(--nomatch); }
+tr.padded td:first-child { box-shadow: inset 3px 0 0 var(--pad); }
+
+tr.cur { transform: translateX(3px); }
+tr.cur td { background: var(--brand-soft) !important; }
+tr.cur td:first-child { box-shadow: inset 4px 0 0 var(--primary); }
+tr.cur.ok td { background: var(--match-soft) !important; }
+tr.cur.ok td:first-child { box-shadow: inset 4px 0 0 var(--match); }
+tr.cur.bad td { background: var(--nomatch-soft) !important; }
+tr.cur.bad td:first-child { box-shadow: inset 4px 0 0 var(--nomatch); }
+tr.cur.padcur td { background: var(--pad-soft) !important; }
+tr.cur.padcur td:first-child { box-shadow: inset 4px 0 0 var(--pad); }
+tr.cur.bad { animation: row-shake 0.4s var(--ease-out); }
+tr.cur.ok { animation: row-nudge 0.45s var(--ease-spring); }
+tr.cur.padcur { animation: row-glow 0.9s var(--ease-out); }
+
+/* A freshly produced result row grows in from nothing, then its highlight fades out. */
+/* --land is set by the flying-row animation so the row materialises as the ghosts arrive. */
+tr.row-enter { animation: row-in 0.45s var(--ease-out) var(--land, 0ms) both; }
+tr.row-enter td { animation: row-flash 1.2s var(--ease-out) var(--land, 0ms) both; }
+tr.row-enter.padded td { animation-name: row-flash-pad; }
+/* Rows revealed by a jump (scrub / final result) cascade in quickly instead of popping. */
+tr.row-cascade { animation: row-fade 0.35s var(--ease-out) both; animation-delay: calc(min(var(--i), 20) * 18ms); }
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes row-fade { from { opacity: 0; transform: translateY(-3px); } }
+@keyframes row-flash { 0%, 30% { background: var(--match-soft); } 100% { } }
+@keyframes row-flash-pad { 0%, 30% { background: var(--pad-soft); } 100% { } }
+@keyframes row-shake {
+  0%, 100% { transform: translateX(3px); }
+  20% { transform: translateX(-3px); } 40% { transform: translateX(7px); }
+  60% { transform: translateX(-1px); } 80% { transform: translateX(5px); }
+}
+@keyframes row-nudge { 0% { transform: translateX(0); } 60% { transform: translateX(6px); } 100% { transform: translateX(3px); } }
+@keyframes row-glow {
+  0% { box-shadow: inset 0 0 0 0 transparent; }
+  40% { box-shadow: inset 0 0 0 2px var(--pad); }
+  100% { box-shadow: inset 0 0 0 0 transparent; }
+}
+
+/* Outer-join phase: dangling rows about to be rescued breathe once or twice to draw the eye. */
+tr.dangling.preview td { animation: dangle 1.1s var(--ease-out) 2; }
+@keyframes dangle { 50% { background: color-mix(in srgb, var(--pad) 28%, var(--pad-soft)); } }
+
+/* Projection: the columns π will drop fade down after the step appears. */
+.stage-enter table.rel .dim { animation: dim-out 0.9s var(--ease-out) 0.25s both; }
+@keyframes dim-out { from { opacity: 1; } to { opacity: 0.3; } }
+
+/* ---------------------------------------------------------------------------------------------
+   Join connector between the two compared rows.
+   --------------------------------------------------------------------------------------------- */
+.links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 3; }
+.links path { fill: none; stroke-width: 2.5; stroke-linecap: round; }
+.links .ok path { stroke: var(--match); }
+.links .bad path { stroke: var(--nomatch); }
+.links .ok circle.end, .links .bad circle.end { stroke: none; }
+.links .ok circle.end { fill: var(--match); }
+.links .bad circle.end { fill: var(--nomatch); }
+.links .badge circle { stroke-width: 2; }
+.links .ok .badge circle { fill: var(--match-soft); stroke: var(--match); }
+.links .bad .badge circle { fill: var(--nomatch-soft); stroke: var(--nomatch); }
+.links .badge text { font-size: 13px; font-weight: 800; text-anchor: middle; dominant-baseline: central; }
+.links .ok .badge text { fill: var(--match); }
+.links .bad .badge text { fill: var(--nomatch); }
+/* pathLength="1" on the path lets one dash cover the whole curve: animate its offset to draw it. */
+.links .draw path { stroke-dasharray: 1; animation: link-draw 0.45s var(--ease-out) both; }
+.links .draw.bad path { animation: link-draw-bad 0.45s var(--ease-out) both; }
+.links .draw circle.end { animation: pop 0.3s var(--ease-spring) both; transform-box: fill-box; transform-origin: center; }
+.links .draw circle.end + circle.end { animation-delay: 0.35s; }
+.links .draw .badge { animation: pop 0.4s var(--ease-spring) 0.25s both; transform-box: fill-box; transform-origin: center; }
+.links .bad:not(.draw) path { stroke-dasharray: 0.02 0.018; }
+@keyframes link-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes link-draw-bad {
+  0% { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  70% { stroke-dasharray: 1; stroke-dashoffset: 0; }
+  100% { stroke-dasharray: 0.02 0.018; stroke-dashoffset: 0; }
+}
+@keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ---------------------------------------------------------------------------------------------
+   Rows flying from the inputs into the result (created by the Stage component with WAAPI).
+   --------------------------------------------------------------------------------------------- */
+.ghost {
+  position: fixed; z-index: 50; pointer-events: none; display: flex; align-items: center; gap: 10px; padding: 0 10px;
+  font-size: 13px; white-space: nowrap; overflow: hidden; border-radius: 6px; border: 2px solid var(--match);
+  background: var(--match-soft); color: var(--foreground); font-variant-numeric: tabular-nums;
+  box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--match) 45%, transparent); will-change: transform, opacity;
+}
+.ghost.pad { border-color: var(--pad); background: var(--pad-soft); box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--pad) 45%, transparent); }
+
+/* Small keyed text swaps (narration, counters, play icon). */
+.swap-in { animation: swap-in 0.35s var(--ease-out) both; }
+@keyframes swap-in { from { opacity: 0; transform: translateY(4px); filter: blur(2px); } }
+.tick-pop { display: inline-block; animation: tick 0.35s var(--ease-spring); }
+@keyframes tick { from { transform: scale(1.35); color: var(--primary); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+}
